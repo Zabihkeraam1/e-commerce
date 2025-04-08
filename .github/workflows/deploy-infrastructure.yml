@@ -27,7 +27,7 @@ jobs:
       - name: Terraform Plan
         run: |
           terraform plan \
-            -var="db_password="db_password=your_secure_password" \
+            -var="db_password=db_password=your_secure_password" \
             -var='subnet_ids=["subnet-123456","subnet-789012"]' \
             -input=false \
             -out=tfplan
@@ -38,7 +38,7 @@ jobs:
       - name: Terraform Apply
         run: |
           terraform plan \
-            -var="db_password="db_password=your_secure_password" \
+            -var="db_password=db_password=your_secure_password" \
             -var='subnet_ids=["subnet-123456","subnet-789012"]' \
             -input=false \
             tfplan
