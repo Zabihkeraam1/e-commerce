@@ -37,7 +37,7 @@ jobs:
           
       - name: Terraform Apply
         run: |
-          terraform plan \
+          terraform apply \
             -var="db_password=db_password=your_secure_password" \
             -var='subnet_ids=["subnet-123456","subnet-789012"]' \
             -input=false \
@@ -48,7 +48,6 @@ jobs:
           
       - name: Store Outputs in SSM
         run: |
-          cd ./terraform
           # Get raw outputs without quotes
           RDS_ENDPOINT=$(terraform output rds_endpoint | grep -oE '".*"' | tr -d '"' | head -1)
           RDS_USERNAME=$(terraform output rds_username | grep -oE '".*"' | tr -d '"' | head -1)
