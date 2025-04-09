@@ -1,67 +1,60 @@
 provider "aws" {
-  region = "us-east-1"
+  region = "us-east-1" # Change to your preferred region
 }
 
-##############################################################
-# Data sources to get VPC, subnets and security group details
-##############################################################
-data "aws_vpc" "default" {
-  default = true
+resource "aws_db_instance" "my_database" {
+  identifier             = "my-postgres-instance"
+  engine                 = "postgres"
+  engine_version         = "15" # Latest stable version as of 2024
+  instance_class         = "db.t3.micro" # Free tier eligible
+  allocated_storage      = 20
+  max_allocated_storage  = 100 # Allows automatic scaling up to 100GB
+  storage_type           = "gp3" # Better than gp2 for PostgreSQL
+  db_name                = "mydatabase"
+  username               = "admin"
+  password               = var.db_password # Should be passed via variables or secrets
+  parameter_group_name   = "default.postgres15"
+  skip_final_snapshot    = true # Set to false for production
+  publicly_accessible    = false
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
+  multi_az               = false # Set to true for production for HA
 }
 
-data "aws_subnet_ids" "all" {
-  vpc_id = "${data.aws_vpc.default.id}"
-}
+# Security group for RDS (PostgreSQL uses port 5432)
+resource "aws_security_group" "rds_sg" {
+  name        = "rds-security-group"
+  description = "Allow inbound access to RDS"
 
-data "aws_security_group" "default" {
-  vpc_id = "${data.aws_vpc.default.id}"
-  name   = "default"
-}
-
-#####
-# DB
-#####
-module "db" {
-  source = "../../"
-
-  identifier = "demodb"
-
-  engine            = "postgres"
-  engine_version    = "9.6.3"
-  instance_class    = "db.t2.large"
-  allocated_storage = 5
-  storage_encrypted = false
-
-  # kms_key_id        = "arm:aws:kms:<region>:<accound id>:key/<kms key id>"
-  name = "demodb"
-
-  # NOTE: Do NOT use 'user' as the value for 'username' as it throws:
-  # "Error creating DB Instance: InvalidParameterValue: MasterUsername
-  # user cannot be used as it is a reserved word used by the engine"
-  username = "demouser"
-
-  password = "YourPwdShouldBeLongAndSecure!"
-  port     = "5432"
-
-  vpc_security_group_ids = ["${data.aws_security_group.default.id}"]
-
-  maintenance_window = "Mon:00:00-Mon:03:00"
-  backup_window      = "03:00-06:00"
-
-  # disable backups to create DB faster
-  backup_retention_period = 0
-
-  tags = {
-    Owner       = "user"
-    Environment = "dev"
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"] # Restrict to your VPC CIDR
   }
 
-  # DB subnet group
-  subnet_ids = ["${data.aws_subnet_ids.all.ids}"]
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
 
-  # DB parameter group
-  family = "postgres9.6"
+# Subnet group for RDS
+resource "aws_db_subnet_group" "rds_subnet_group" {
+  name       = "rds-subnet-group"
+  subnet_ids = var.subnet_ids # Pass your subnet IDs as a variable
 
-  # Snapshot name upon DB deletion
-  final_snapshot_identifier = "demodb"
+  tags = {
+    Name = "RDS Subnet Group"
+  }
+}
+
+output "rds_endpoint" {
+  value = aws_db_instance.my_database.endpoint
+}
+
+output "rds_username" {
+  value = aws_db_instance.my_database.username
 }
