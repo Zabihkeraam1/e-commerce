@@ -9,7 +9,7 @@ data "aws_security_group" "default" {
 }
 
 resource "aws_db_instance" "my_database" {
-  identifier             = "my-postgres-instance-${random_id.suffix.hex}"  # Added random suffix
+  identifier             = "my-postgres-instance-${random_id.suffix.hex}"
   engine                 = "postgres"
   engine_version         = "15"
   instance_class         = "db.t3.micro"
@@ -17,18 +17,27 @@ resource "aws_db_instance" "my_database" {
   max_allocated_storage  = 100
   storage_type           = "gp3"
   db_name                = "mydatabase"
-  username               = "demoadmin"
+  username               = "postgres"
   password               = var.db_password
   parameter_group_name   = "default.postgres15"
   skip_final_snapshot    = true
-  publicly_accessible    = false
-  vpc_security_group_ids = [data.aws_security_group.default.id]  # Using default SG
+  publicly_accessible    = true  # Changed to true for public access
+  vpc_security_group_ids = [data.aws_security_group.default.id]
   multi_az               = false
   
-  # Allow major version upgrades (optional)
-  allow_major_version_upgrade = false
-  auto_minor_version_upgrade  = true
-  apply_immediately           = false
+  # Security: Update the default SG to allow public access
+  depends_on = [aws_security_group_rule.postgres_public_access]
+}
+
+# Add a rule to the default security group to allow PostgreSQL traffic
+resource "aws_security_group_rule" "postgres_public_access" {
+  type              = "ingress"
+  from_port         = 5432
+  to_port           = 5432
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]  # Allows access from any IP
+  security_group_id = data.aws_security_group.default.id
+  description       = "Allow public PostgreSQL access"
 }
 
 # Add a random suffix to ensure unique DB identifier
