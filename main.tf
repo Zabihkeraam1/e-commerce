@@ -5,23 +5,22 @@ provider "aws" {
 resource "aws_db_instance" "my_database" {
   identifier             = "my-postgres-instance"
   engine                 = "postgres"
-  engine_version         = "15" # Latest stable version as of 2024
-  instance_class         = "db.t3.micro" # Free tier eligible
+  engine_version         = "15"
+  instance_class         = "db.t3.micro"
   allocated_storage      = 20
-  max_allocated_storage  = 100 # Allows automatic scaling up to 100GB
-  storage_type           = "gp3" # Better than gp2 for PostgreSQL
+  max_allocated_storage  = 100
+  storage_type           = "gp3"
   db_name                = "mydatabase"
   username               = "admin"
-  password               = var.db_password # Should be passed via variables or secrets
+  password               = var.db_password
   parameter_group_name   = "default.postgres15"
-  skip_final_snapshot    = true # Set to false for production
+  skip_final_snapshot    = true
   publicly_accessible    = false
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
-  multi_az               = false # Set to true for production for HA
+  # Removed explicit subnet group reference - will use default
+  multi_az               = false
 }
 
-# Security group for RDS (PostgreSQL uses port 5432)
 resource "aws_security_group" "rds_sg" {
   name        = "rds-security-group"
   description = "Allow inbound access to RDS"
@@ -41,15 +40,7 @@ resource "aws_security_group" "rds_sg" {
   }
 }
 
-# Subnet group for RDS
-resource "aws_db_subnet_group" "rds_subnet_group" {
-  name       = "rds-subnet-group"
-  subnet_ids = var.subnet_ids # Pass your subnet IDs as a variable
-
-  tags = {
-    Name = "RDS Subnet Group"
-  }
-}
+# Removed the aws_db_subnet_group resource since we're using default
 
 output "rds_endpoint" {
   value = aws_db_instance.my_database.endpoint
