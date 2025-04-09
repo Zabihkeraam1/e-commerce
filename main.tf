@@ -16,7 +16,7 @@ resource "aws_db_instance" "my_database" {
   allocated_storage      = 20
   max_allocated_storage  = 100
   storage_type           = "gp3"
-  db_name                = "mydatabase"
+  db_name                = "mynewdatabase"
   username               = "postgres"
   password               = var.db_password
   parameter_group_name   = "default.postgres15"
