@@ -1,9 +1,15 @@
 provider "aws" {
-  region = "us-east-1" # Change to your preferred region
+  region = "us-east-1"
+}
+
+# Get the default security group for your VPC
+data "aws_security_group" "default" {
+  name   = "default"
+  vpc_id = "vpc-0297cd44f118eae2f"  # Replace with your actual VPC ID
 }
 
 resource "aws_db_instance" "my_database" {
-  identifier             = "my-postgres-instance"
+  identifier             = "my-postgres-instance-${random_id.suffix.hex}"  # Added random suffix
   engine                 = "postgres"
   engine_version         = "15"
   instance_class         = "db.t3.micro"
@@ -16,31 +22,19 @@ resource "aws_db_instance" "my_database" {
   parameter_group_name   = "default.postgres15"
   skip_final_snapshot    = true
   publicly_accessible    = false
-  vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  # Removed explicit subnet group reference - will use default
+  vpc_security_group_ids = [data.aws_security_group.default.id]  # Using default SG
   multi_az               = false
+  
+  # Allow major version upgrades (optional)
+  allow_major_version_upgrade = false
+  auto_minor_version_upgrade  = true
+  apply_immediately           = false
 }
 
-resource "aws_security_group" "rds_sg" {
-  name        = "rds-security-group"
-  description = "Allow inbound access to RDS"
-
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"] # Restrict to your VPC CIDR
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+# Add a random suffix to ensure unique DB identifier
+resource "random_id" "suffix" {
+  byte_length = 4
 }
-
-# Removed the aws_db_subnet_group resource since we're using default
 
 output "rds_endpoint" {
   value = aws_db_instance.my_database.endpoint
