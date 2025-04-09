@@ -22,23 +22,10 @@ resource "aws_db_instance" "my_database" {
   parameter_group_name   = "default.postgres15"
   skip_final_snapshot    = true
   publicly_accessible    = true  # Changed to true for public access
-  vpc_security_group_ids = [data.aws_security_group.default.id]
   multi_az               = false
-  
-  # Security: Update the default SG to allow public access
-  depends_on = [aws_security_group_rule.postgres_public_access]
+
 }
 
-# Add a rule to the default security group to allow PostgreSQL traffic
-resource "aws_security_group_rule" "postgres_public_access" {
-  type              = "ingress"
-  from_port         = 5432
-  to_port           = 5432
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]  # Allows access from any IP
-  security_group_id = data.aws_security_group.default.id
-  description       = "Allow public PostgreSQL access"
-}
 
 # Add a random suffix to ensure unique DB identifier
 resource "random_id" "suffix" {
